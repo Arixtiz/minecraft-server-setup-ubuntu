@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+FORGE_META="https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json"
 FORGE_MAVEN="https://maven.minecraftforge.net/net/minecraftforge/forge"
 SERVER_DIR="/opt/minecraft/server"
 
@@ -10,16 +11,17 @@ cd "$SERVER_DIR"
 echo "🔎 Obteniendo versiones de Minecraft disponibles en Forge..."
 echo
 
-# 1️⃣ Obtener versiones de Minecraft
+# 1️⃣ Obtener versiones de Minecraft desde JSON
 mapfile -t MC_VERSIONS < <(
-  curl -s "$FORGE_MAVEN" |
-  grep -oP '(?<=href=")[0-9]+\.[0-9]+(\.[0-9]+)?(?=/")' |
-  sort -Vr |
-  uniq
+  curl -s "$FORGE_META" |
+  grep -oP '"[0-9]+\.[0-9]+(\.[0-9]+)?-recommended"' |
+  sed 's/"//g' |
+  sed 's/-recommended//g' |
+  sort -Vr
 )
 
-if [ ${#MC_VERSIONS[@]} -eq 0 ]; then
-  echo "❌ No se pudieron obtener versiones de Minecraft"
+if [ "${#MC_VERSIONS[@]}" -eq 0 ]; then
+  echo "❌ No se pudieron obtener versiones de Minecraft desde Forge"
   exit 1
 fi
 
@@ -45,12 +47,13 @@ echo "🔎 Buscando versiones Forge para Minecraft $MC_VERSION..."
 echo
 
 mapfile -t FORGE_VERSIONS < <(
-  curl -s "$FORGE_MAVEN/$MC_VERSION/" |
-  grep -oP '(?<=href=")[0-9]+\.[0-9]+\.[0-9]+(?=/")' |
+  curl -s "$FORGE_MAVEN" |
+  grep -oP "(?<=href=\")${MC_VERSION}-[0-9]+\.[0-9]+\.[0-9]+(?=/\")" |
+  sed "s/^${MC_VERSION}-//" |
   sort -Vr
 )
 
-if [ ${#FORGE_VERSIONS[@]} -eq 0 ]; then
+if [ "${#FORGE_VERSIONS[@]}" -eq 0 ]; then
   echo "❌ No se encontraron versiones Forge para $MC_VERSION"
   exit 1
 fi
@@ -72,19 +75,17 @@ fi
 echo "✅ Forge seleccionado: $FORGE_VERSION"
 echo
 
-# 3️⃣ Descargar Forge Installer
+# 3️⃣ Descargar e instalar
 INSTALLER="forge-${MC_VERSION}-${FORGE_VERSION}-installer.jar"
-INSTALLER_URL="$FORGE_MAVEN/$MC_VERSION-$FORGE_VERSION/$INSTALLER"
+INSTALLER_URL="$FORGE_MAVEN/${MC_VERSION}-${FORGE_VERSION}/$INSTALLER"
 
 echo "⬇️ Descargando Forge Installer..."
 wget -q --show-progress -O "$INSTALLER" "$INSTALLER_URL"
 
-echo "⚙️ Instalando Forge (modo server)..."
+echo "⚙️ Instalando Forge..."
 java -jar "$INSTALLER" --installServer
 
-echo "🧹 Limpiando instalador..."
 rm -f "$INSTALLER"
-
 chown -R minecraft:minecraft /opt/minecraft
 
 echo "🎉 Forge instalado correctamente"
