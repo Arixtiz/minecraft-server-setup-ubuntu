@@ -8,16 +8,17 @@ SERVER_DIR="/opt/minecraft/server"
 mkdir -p "$SERVER_DIR"
 cd "$SERVER_DIR"
 
-echo "🔎 Obteniendo versiones de Minecraft disponibles en Forge..."
+echo "🔎 Obteniendo versiones de Minecraft disponibles con soporte Forge..."
 echo
 
-# 1️⃣ Obtener versiones de Minecraft desde JSON
+# 1️⃣ Obtener versiones de Minecraft desde promos (recommended + latest)
 mapfile -t MC_VERSIONS < <(
   curl -s "$FORGE_META" |
-  grep -oP '"[0-9]+\.[0-9]+(\.[0-9]+)?-recommended"' |
+  grep -oP '"[0-9]+\.[0-9]+(\.[0-9]+)?-(recommended|latest)"' |
   sed 's/"//g' |
-  sed 's/-recommended//g' |
-  sort -Vr
+  cut -d- -f1 |
+  sort -Vr |
+  uniq
 )
 
 if [ "${#MC_VERSIONS[@]}" -eq 0 ]; then
@@ -39,53 +40,63 @@ if [ -z "$MC_VERSION" ]; then
   exit 1
 fi
 
+echo
 echo "✅ Minecraft seleccionado: $MC_VERSION"
 echo
 
-# 2️⃣ Obtener versiones Forge para esa versión
-echo "🔎 Buscando versiones Forge para Minecraft $MC_VERSION..."
+# 2️⃣ Elegir tipo de Forge
+echo "🧱 Tipo de Forge:"
+echo " [1] Recommended (estable)"
+echo " [2] Latest (más reciente)"
 echo
+read -rp "👉 Selecciona el tipo de Forge [1/2]: " FORGE_TYPE_INPUT
 
-mapfile -t FORGE_VERSIONS < <(
-  curl -s "$FORGE_MAVEN" |
-  grep -oP "(?<=href=\")${MC_VERSION}-[0-9]+\.[0-9]+\.[0-9]+(?=/\")" |
-  sed "s/^${MC_VERSION}-//" |
-  sort -Vr
-)
-
-if [ "${#FORGE_VERSIONS[@]}" -eq 0 ]; then
-  echo "❌ No se encontraron versiones Forge para $MC_VERSION"
-  exit 1
-fi
-
-echo "🧱 Versiones Forge disponibles:"
-for i in "${!FORGE_VERSIONS[@]}"; do
-  printf " [%d] %s\n" "$i" "${FORGE_VERSIONS[$i]}"
-done
+case "$FORGE_TYPE_INPUT" in
+  1) FORGE_TYPE="recommended" ;;
+  2) FORGE_TYPE="latest" ;;
+  *)
+    echo "❌ Opción inválida"
+    exit 1
+    ;;
+esac
 
 echo
-read -rp "👉 Selecciona la versión de Forge: " FORGE_INDEX
-FORGE_VERSION="${FORGE_VERSIONS[$FORGE_INDEX]}"
+echo "🔎 Resolviendo versión Forge ($FORGE_TYPE)..."
+
+FORGE_VERSION=$(curl -s "$FORGE_META" |
+  grep -oP "\"${MC_VERSION}-${FORGE_TYPE}\":\s*\"[^\"]+\"" |
+  sed -E 's/.*"([^"]+)".*/\1/')
 
 if [ -z "$FORGE_VERSION" ]; then
-  echo "❌ Selección inválida"
+  echo "❌ Forge no disponible para Minecraft $MC_VERSION ($FORGE_TYPE)"
   exit 1
 fi
 
 echo "✅ Forge seleccionado: $FORGE_VERSION"
 echo
 
-# 3️⃣ Descargar e instalar
+# 3️⃣ Descargar e instalar Forge
 INSTALLER="forge-${MC_VERSION}-${FORGE_VERSION}-installer.jar"
-INSTALLER_URL="$FORGE_MAVEN/${MC_VERSION}-${FORGE_VERSION}/$INSTALLER"
+INSTALLER_URL="$FORGE_MAVEN/${MC_VERSION}-${FORGE_VERSION}/${INSTALLER}"
 
 echo "⬇️ Descargando Forge Installer..."
 wget -q --show-progress -O "$INSTALLER" "$INSTALLER_URL"
 
-echo "⚙️ Instalando Forge..."
+echo
+echo "⚙️ Instalando Forge Server..."
 java -jar "$INSTALLER" --installServer
 
+echo
+echo "🧹 Limpiando archivos temporales..."
 rm -f "$INSTALLER"
-chown -R minecraft:minecraft /opt/minecraft
 
+# Ajustar permisos si existe el usuario minecraft
+if id minecraft &>/dev/null; then
+  chown -R minecraft:minecraft /opt/minecraft
+fi
+
+echo
 echo "🎉 Forge instalado correctamente"
+echo "📁 Directorio del servidor: $SERVER_DIR"
+echo
+echo "👉 Próximo paso: aceptar EULA y configurar server.properties"
