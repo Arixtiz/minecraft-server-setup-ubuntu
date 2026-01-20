@@ -21,8 +21,7 @@ bash scripts/generate_systemd_service.sh
 bash scripts/first_run.sh
 bash scripts/setup_firewall.sh
 
-echo "⚙️ Instalando systemd service..."
-cp systemd/minecraft-forge.service /etc/systemd/system/minecraft-forge.service
+echo "⚙️ Ejecutando systemd service..."
 systemctl daemon-reload
 systemctl enable minecraft-forge
 
