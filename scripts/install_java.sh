@@ -67,7 +67,7 @@ apt install -y openjdk-${JAVA_VERSION}-jre-headless
 # ==============================
 
 echo "🔁 Configurando Java por defecto..."
-update-alternatives --set java /usr/lib/jvm/java-${JAVA_VERSION}-openjdk-amd64/bin/java
+update-alternatives --auto java
 
 # ==============================
 # 6️⃣ VERIFICACIÓN
