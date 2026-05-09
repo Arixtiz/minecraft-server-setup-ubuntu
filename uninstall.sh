@@ -1,10 +1,10 @@
 #!/bin/bash
 
-echo "⚠️ Desinstalando Minecraft Forge Server..."
+echo "⚠️  Desinstalando Minecraft Server..."
 
-systemctl stop minecraft-forge || true
-systemctl disable minecraft-forge || true
-rm -f /etc/systemd/system/minecraft-forge.service
+systemctl stop minecraft || true
+systemctl disable minecraft || true
+rm -f /etc/systemd/system/minecraft.service
 systemctl daemon-reload
 
 userdel -r minecraft || true

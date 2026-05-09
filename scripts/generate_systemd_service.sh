@@ -1,67 +1,112 @@
 #!/bin/bash
 set -e
 
-SERVICE_PATH="/etc/systemd/system/minecraft-forge.service"
+SERVICE_PATH="/etc/systemd/system/minecraft.service"
 SERVER_DIR="/opt/minecraft/server"
-JVM_ARGS_FILE="$SERVER_DIR/user_jvm_args.txt"
+META_FILE="/opt/minecraft/.server-meta"
 
+# Cargar metadata del servidor
+if [ -f "$META_FILE" ]; then
+  source "$META_FILE"
+fi
+
+echo "⚙️  Generando servicio systemd para: ${SERVER_TYPE:-vanilla}"
+echo
+
+# ==============================
+# Calcular RAM recomendada
+# ==============================
 TOTAL_RAM_MB=$(free -m | awk '/^Mem:/ {print $2}')
 TOTAL_RAM_GB=$((TOTAL_RAM_MB / 1024))
 
-echo "🧠 Detección de memoria RAM"
-echo "👉 RAM total del sistema: ${TOTAL_RAM_GB} GB"
-echo
+echo "🧠 RAM total del sistema: ${TOTAL_RAM_GB} GB"
 
-if [ "$TOTAL_RAM_GB" -lt 6 ]; then
-  echo "❌ Forge no es recomendado con menos de 6 GB de RAM"
-  exit 1
+# Recomendaciones según tipo
+case "$SERVER_TYPE" in
+  forge)
+    MIN_RAM_GB=6
+    ;;
+  fabric)
+    MIN_RAM_GB=2
+    ;;
+  *)
+    MIN_RAM_GB=1
+    ;;
+esac
+
+if [ "$TOTAL_RAM_GB" -lt "$MIN_RAM_GB" ]; then
+  echo "⚠️  Advertencia: se recomiendan al menos ${MIN_RAM_GB} GB de RAM para $SERVER_TYPE (tienes ${TOTAL_RAM_GB} GB)"
 fi
 
-# Recomendaciones
 RECOMMENDED_MAX=$((TOTAL_RAM_GB * 65 / 100))
 RECOMMENDED_MIN=$((RECOMMENDED_MAX / 2))
 
-echo "📊 Recomendación para Forge:"
-echo "   - RAM mínima: ${RECOMMENDED_MIN}G"
-echo "   - RAM máxima: ${RECOMMENDED_MAX}G"
+# Garantizar mínimos absolutos
+[ "$RECOMMENDED_MAX" -lt 1 ] && RECOMMENDED_MAX=1
+[ "$RECOMMENDED_MIN" -lt 1 ] && RECOMMENDED_MIN=1
+
+echo "📊 Recomendación de RAM:"
+echo "   - Mínima (-Xms): ${RECOMMENDED_MIN}G"
+echo "   - Máxima (-Xmx): ${RECOMMENDED_MAX}G"
 echo
 
-read -rp "🧮 RAM mínima (-Xms) [${RECOMMENDED_MIN}G]: " XMS
-XMS=${XMS:-${RECOMMENDED_MIN}G}
+if [ -n "$XMS" ]; then
+  echo "📄 XMS desde entorno: $XMS"
+else
+  read -rp "🧮 RAM mínima (-Xms) [${RECOMMENDED_MIN}G]: " XMS
+  XMS=${XMS:-${RECOMMENDED_MIN}G}
+fi
 
-read -rp "🧮 RAM máxima (-Xmx) [${RECOMMENDED_MAX}G]: " XMX
-XMX=${XMX:-${RECOMMENDED_MAX}G}
+if [ -n "$XMX" ]; then
+  echo "📄 XMX desde entorno: $XMX"
+else
+  read -rp "🧮 RAM máxima (-Xmx) [${RECOMMENDED_MAX}G]: " XMX
+  XMX=${XMX:-${RECOMMENDED_MAX}G}
+fi
 
 echo
-echo "⚙️ Generando user_jvm_args.txt..."
-echo
 
-cat > "$JVM_ARGS_FILE" <<EOF
--Xms$XMS
--Xmx$XMX
--XX:+UseG1GC
--XX:+ParallelRefProcEnabled
--XX:MaxGCPauseMillis=200
--XX:+UnlockExperimentalVMOptions
--XX:+DisableExplicitGC
-EOF
+# ==============================
+# Determinar comando de inicio según tipo
+# ==============================
+case "$SERVER_TYPE" in
+  vanilla | papermc)
+    EXEC_START="/usr/bin/java -Xms${XMS} -Xmx${XMX} \
+-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 \
+-XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC \
+-jar ${SERVER_DIR}/server.jar nogui"
+    ;;
+  fabric)
+    EXEC_START="/usr/bin/java -Xms${XMS} -Xmx${XMX} \
+-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 \
+-XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC \
+-jar ${SERVER_DIR}/fabric-server-launch.jar nogui"
+    ;;
+  forge)
+    # Forge genera su propio run.sh
+    EXEC_START="${SERVER_DIR}/run.sh"
+    ;;
+  *)
+    EXEC_START="/usr/bin/java -Xms${XMS} -Xmx${XMX} -jar ${SERVER_DIR}/server.jar nogui"
+    ;;
+esac
 
-chown minecraft:minecraft "$JVM_ARGS_FILE"
-
-echo "⚙️ Generando minecraft-forge.service..."
-echo
+# ==============================
+# Generar minecraft.service
+# ==============================
+echo "📝 Generando $SERVICE_PATH..."
 
 cat > "$SERVICE_PATH" <<EOF
 [Unit]
-Description=Minecraft Forge Server
+Description=Minecraft Server (${SERVER_TYPE})
 After=network.target
 
 [Service]
 Type=simple
 User=minecraft
-WorkingDirectory=$SERVER_DIR
+WorkingDirectory=${SERVER_DIR}
 
-ExecStart=$SERVER_DIR/run.sh
+ExecStart=${EXEC_START}
 
 Restart=on-failure
 RestartSec=15
@@ -73,11 +118,13 @@ KillSignal=SIGINT
 WantedBy=multi-user.target
 EOF
 
-chmod +x "$SERVER_DIR/run.sh"
+# Para Forge, asegurarse que run.sh sea ejecutable
+if [ "$SERVER_TYPE" = "forge" ] && [ -f "$SERVER_DIR/run.sh" ]; then
+  chmod +x "$SERVER_DIR/run.sh"
+fi
 
 systemctl daemon-reload
-systemctl enable minecraft-forge
 
 echo
-echo "✅ Servicio systemd creado correctamente"
-echo "👉 Usa: sudo systemctl start minecraft-forge"
+echo "✅ Servicio minecraft.service creado correctamente"
+echo "👉 Usa: sudo systemctl start minecraft"
