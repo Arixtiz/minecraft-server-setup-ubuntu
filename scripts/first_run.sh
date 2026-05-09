@@ -20,7 +20,7 @@ fi
 
 # Copiar mods solo para Fabric y Forge (Vanilla/PaperMC no los usan)
 case "$SERVER_TYPE" in
-  fabric | forge)
+  fabric | forge | neoforge)
     echo "📦 Preparando carpeta de mods para $SERVER_TYPE..."
     mkdir -p "$SERVER_DIR/mods"
     # Copiar mods si hay alguno (excluir .gitkeep)

@@ -300,13 +300,124 @@ download_forge() {
 }
 
 # ==============================
+# NEOFORGE
+# ==============================
+download_neoforge() {
+  NEOFORGE_API="https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge"
+  NEOFORGE_MAVEN="https://maven.neoforged.net/releases/net/neoforged/neoforge"
+
+  echo "🔩 Descargando NeoForge Server..."
+  echo
+
+  echo "🔎 Obteniendo versiones estables de NeoForge..."
+
+  # Helper: convierte version NeoForge -> version Minecraft
+  nf_to_mc() {
+    local v="$1"
+    local maj min
+    maj=$(echo "$v" | cut -d. -f1)
+    min=$(echo "$v" | cut -d. -f2)
+    if [ "$min" = "0" ]; then
+      echo "1.${maj}"
+    else
+      echo "1.${maj}.${min}"
+    fi
+  }
+
+  # Obtener versiones estables (sin -beta, sin -alpha, sin +snapshot)
+  mapfile -t NF_VERSIONS < <(
+    curl -s "$NEOFORGE_API" \
+      | jq -r '.versions[]' \
+      | grep -v -- '-beta' \
+      | grep -v -- '-alpha' \
+      | grep -v -- '+' \
+      | grep -E '^[0-9]+\.[0-9]+\.' \
+      | sort -Vr
+  )
+
+  if [ "${#NF_VERSIONS[@]}" -eq 0 ]; then
+    echo "❌ No se pudieron obtener versiones estables de NeoForge"
+    exit 1
+  fi
+
+  # Mostrar versiones agrupadas por MC version (sin repetir)
+  declare -A MC_SEEN
+  declare -a MC_ORDER
+  declare -A MC_LATEST_NF
+
+  for v in "${NF_VERSIONS[@]}"; do
+    mc=$(nf_to_mc "$v")
+    if [ -z "${MC_SEEN[$mc]+x}" ]; then
+      MC_SEEN[$mc]=1
+      MC_ORDER+=("$mc")
+      MC_LATEST_NF[$mc]="$v"   # primer elemento = más reciente (sort -Vr)
+    fi
+  done
+
+  if [ -n "$MC_VERSION" ]; then
+    echo "📄 Versión desde entorno: $MC_VERSION"
+    # Buscar la versión NF estable más reciente para esa MC version
+    local mc_maj mc_min
+    mc_maj=$(echo "$MC_VERSION" | cut -d. -f2)
+    mc_min=$(echo "$MC_VERSION" | cut -d. -f3); mc_min=${mc_min:-0}
+    NF_VERSION=$(echo "${NF_VERSIONS[@]}" | tr ' ' '\n' \
+      | grep -E "^${mc_maj}\.${mc_min}\." | head -1)
+    if [ -z "$NF_VERSION" ]; then
+      echo "❌ NeoForge no tiene versión estable para Minecraft $MC_VERSION"
+      echo "   NeoForge soporta MC 1.20.2 en adelante."
+      exit 1
+    fi
+  else
+    echo "🎮 Versiones de Minecraft con NeoForge estable:"
+    for i in "${!MC_ORDER[@]}"; do
+      printf "  [%2d] MC %-10s  (NeoForge %s)\n" \
+        "$i" "${MC_ORDER[$i]}" "${MC_LATEST_NF[${MC_ORDER[$i]}]}"
+    done
+    echo
+
+    read -rp "👉 Selecciona la versión [0 = más reciente]: " MC_IDX
+    MC_VERSION="${MC_ORDER[${MC_IDX:-0}]}"
+    NF_VERSION="${MC_LATEST_NF[$MC_VERSION]}"
+
+    if [ -z "$MC_VERSION" ] || [ -z "$NF_VERSION" ]; then
+      echo "❌ Selección inválida"
+      exit 1
+    fi
+
+    export MC_VERSION
+  fi
+
+  echo "✅ Minecraft: $MC_VERSION"
+  echo "✅ NeoForge:  $NF_VERSION"
+  echo
+
+  INSTALLER="neoforge-${NF_VERSION}-installer.jar"
+  INSTALLER_URL="$NEOFORGE_MAVEN/$NF_VERSION/$INSTALLER"
+
+  echo "⬇️  Descargando NeoForge Installer ($NF_VERSION)..."
+  wget -q --show-progress -O "/tmp/$INSTALLER" "$INSTALLER_URL"
+
+  echo
+  echo "⚙️  Instalando NeoForge Server..."
+  java -jar "/tmp/$INSTALLER" --installServer "$SERVER_DIR"
+
+  rm -f "/tmp/$INSTALLER"
+
+  save_meta
+  echo
+  echo "✅ NeoForge $NF_VERSION (MC $MC_VERSION) instalado correctamente"
+  echo "   El servidor usa: run.sh"
+}
+
+# ==============================
 # DISPATCH
 # ==============================
 case "$SERVER_TYPE" in
-  vanilla)  download_vanilla  ;;
-  papermc)  download_papermc  ;;
-  fabric)   download_fabric   ;;
-  forge)    download_forge    ;;
+  vanilla)   download_vanilla   ;;
+  papermc)   download_papermc   ;;
+  fabric)    download_fabric    ;;
+  forge)     download_forge     ;;
+  neoforge)  download_neoforge  ;;
   *)
     echo "❌ SERVER_TYPE no definido o inválido: '$SERVER_TYPE'"
     echo "   Valores válidos: vanilla | papermc | fabric | forge"

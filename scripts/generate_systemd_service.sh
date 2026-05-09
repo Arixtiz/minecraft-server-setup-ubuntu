@@ -82,8 +82,8 @@ case "$SERVER_TYPE" in
 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC \
 -jar ${SERVER_DIR}/fabric-server-launch.jar nogui"
     ;;
-  forge)
-    # Forge genera su propio run.sh
+  forge | neoforge)
+    # Forge/NeoForge generan su propio run.sh durante la instalación
     EXEC_START="${SERVER_DIR}/run.sh"
     ;;
   *)
@@ -118,8 +118,8 @@ KillSignal=SIGINT
 WantedBy=multi-user.target
 EOF
 
-# Para Forge, asegurarse que run.sh sea ejecutable
-if [ "$SERVER_TYPE" = "forge" ] && [ -f "$SERVER_DIR/run.sh" ]; then
+# Para Forge/NeoForge, asegurarse que run.sh sea ejecutable
+if [[ "$SERVER_TYPE" == "forge" || "$SERVER_TYPE" == "neoforge" ]] && [ -f "$SERVER_DIR/run.sh" ]; then
   chmod +x "$SERVER_DIR/run.sh"
 fi
 

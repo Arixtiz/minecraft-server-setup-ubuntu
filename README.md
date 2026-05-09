@@ -48,12 +48,13 @@ El instalador consulta automáticamente la API de Mojang. Si no hay conexión, u
 
 ### Hardware recomendado
 
-| Tipo de servidor           | RAM    | CPU     | Almacenamiento |
-|----------------------------|--------|---------|----------------|
-| Vanilla (1–5 jugadores)    | 2 GB   | 1 vCPU  | 10 GB SSD      |
-| PaperMC (5–20 jugadores)   | 4 GB   | 2 vCPU  | 20 GB SSD      |
-| Fabric con mods            | 4 GB   | 2 vCPU  | 20 GB SSD      |
-| Forge (mods pesados)       | 8 GB+  | 4 vCPU+ | 40 GB SSD      |
+| Tipo de servidor             | RAM    | CPU     | Almacenamiento |
+|------------------------------|--------|---------|----------------|
+| Vanilla (1–5 jugadores)      | 2 GB   | 1 vCPU  | 10 GB SSD      |
+| PaperMC (5–20 jugadores)     | 4 GB   | 2 vCPU  | 20 GB SSD      |
+| Fabric con mods              | 4 GB   | 2 vCPU  | 20 GB SSD      |
+| NeoForge (mods modernos)     | 6 GB+  | 2 vCPU+ | 30 GB SSD      |
+| Forge (mods pesados)         | 8 GB+  | 4 vCPU+ | 40 GB SSD      |
 
 
 ## 🛠️ Instalación
@@ -73,7 +74,7 @@ nano .env
 ```
 
 ```env
-SERVER_TYPE=fabric        # vanilla | papermc | fabric | forge
+SERVER_TYPE=fabric        # vanilla | papermc | fabric | neoforge | forge
 MC_VERSION=1.21.4         # opcional, el script lo preguntará si no está
 MAX_PLAYERS=20
 LEVEL_NAME=world
@@ -158,12 +159,13 @@ sudo ufw enable
 
 ## 🧩 Compatibilidad de tipos de servidor
 
-| Tipo      | Estado | Descripción                              |
-|-----------|--------|------------------------------------------|
-| Vanilla   | ✅     | Servidor oficial de Mojang               |
-| PaperMC   | ✅     | Alto rendimiento + plugins               |
-| Fabric    | ✅     | Mods modernos, ligero y optimizado       |
-| Forge     | ✅     | Mods tradicionales (mayor base de mods)  |
+| Tipo      | Estado | Descripción                                      |
+|-----------|--------|--------------------------------------------------|
+| Vanilla   | ✅     | Servidor oficial de Mojang                       |
+| PaperMC   | ✅     | Alto rendimiento + plugins                       |
+| Fabric    | ✅     | Mods modernos, ligero y optimizado               |
+| NeoForge  | ✅     | Fork moderno de Forge, soporta MC 1.20.2+        |
+| Forge     | ✅     | Mods tradicionales (mayor base de mods)          |
 
 
 ## 📛 Advertencias importantes
@@ -181,6 +183,7 @@ sudo ufw enable
 - [x] Soporte Vanilla
 - [x] Soporte PaperMC
 - [x] Soporte Fabric ⭐
+- [x] Soporte NeoForge (1.20.2+) ⭐
 - [x] Soporte Forge
 - [x] Instalación automática de Java según versión de Minecraft
 - [x] Coexistencia de múltiples versiones de Java

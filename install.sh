@@ -22,10 +22,11 @@ echo
 # Selección de tipo de servidor
 # ==============================
 echo "🎮 Selecciona el tipo de servidor:"
-echo "  [1] Vanilla  — Servidor oficial de Mojang"
-echo "  [2] PaperMC  — Alto rendimiento + plugins Bukkit/Spigot"
-echo "  [3] Fabric   — Mods modernos, ligero y optimizado ⭐"
-echo "  [4] Forge    — Mods tradicionales (mayor compatibilidad)"
+echo "  [1] Vanilla   — Servidor oficial de Mojang"
+echo "  [2] PaperMC   — Alto rendimiento + plugins Bukkit/Spigot"
+echo "  [3] Fabric    — Mods modernos, ligero y optimizado ⭐"
+echo "  [4] NeoForge  — Fork moderno de Forge (1.20.2+) ⭐"
+echo "  [5] Forge     — Mods tradicionales (mayor compatibilidad)"
 echo
 
 if [ -n "$SERVER_TYPE" ]; then
@@ -36,7 +37,8 @@ else
     1) SERVER_TYPE="vanilla" ;;
     2) SERVER_TYPE="papermc" ;;
     3) SERVER_TYPE="fabric" ;;
-    4) SERVER_TYPE="forge" ;;
+    4) SERVER_TYPE="neoforge" ;;
+    5) SERVER_TYPE="forge" ;;
     *)
       echo "❌ Opción inválida"
       exit 1
