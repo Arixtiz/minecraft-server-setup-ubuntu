@@ -51,10 +51,44 @@ echo "✅ Tipo seleccionado: $SERVER_TYPE"
 echo
 
 # ==============================
+# Selección de versión de Minecraft
+# ==============================
+if [ -n "$MC_VERSION" ]; then
+  echo "📄 Versión detectada desde .env: $MC_VERSION"
+else
+  MOJANG_MANIFEST="https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
+  echo "🔎 Obteniendo versiones de Minecraft (releases)..."
+  mapfile -t MC_VERSIONS < <(
+    curl -s "$MOJANG_MANIFEST" | jq -r '.versions[] | select(.type == "release") | .id' | head -20
+  )
+
+  if [ "${#MC_VERSIONS[@]}" -gt 0 ]; then
+    echo "🎮 Versiones disponibles (últimas releases):"
+    for i in "${!MC_VERSIONS[@]}"; do
+      printf "  [%2d] %s\n" "$i" "${MC_VERSIONS[$i]}"
+    done
+    echo
+    read -rp "👉 Selecciona la versión [0 = más reciente]: " MC_IDX
+    MC_VERSION="${MC_VERSIONS[${MC_IDX:-0}]}"
+  else
+    read -rp "🎮 Ingresa la versión de Minecraft (ej: 1.21.1): " MC_VERSION
+  fi
+
+  if [ -z "$MC_VERSION" ]; then
+    echo "❌ Versión inválida"
+    exit 1
+  fi
+fi
+
+export MC_VERSION
+echo "✅ Versión de Minecraft: $MC_VERSION"
+echo
+
+# ==============================
 # Secuencia de instalación
 # ==============================
-bash scripts/download_server.sh
 bash scripts/install_java.sh
+bash scripts/download_server.sh
 bash scripts/create_user.sh
 bash scripts/generate_server_properties.sh
 bash scripts/generate_systemd_service.sh

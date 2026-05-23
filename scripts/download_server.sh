@@ -187,6 +187,11 @@ download_fabric() {
 
   echo
   echo "⚙️  Instalando Fabric Server en $SERVER_DIR..."
+  if ! command -v java &>/dev/null; then
+    echo "❌ Java no está instalado. Instala el JDK correcto antes de continuar."
+    echo "   Sugerencia: apt install openjdk-21-jre-headless"
+    exit 1
+  fi
   java -jar "/tmp/$INSTALLER_JAR" server \
     -mcversion "$MC_VERSION" \
     -loader "$LOADER_VERSION" \
@@ -289,6 +294,11 @@ download_forge() {
 
   echo
   echo "⚙️  Instalando Forge Server..."
+  if ! command -v java &>/dev/null; then
+    echo "❌ Java no está instalado. Instala el JDK correcto antes de continuar."
+    echo "   Sugerencia: apt install openjdk-21-jre-headless"
+    exit 1
+  fi
   java -jar "/tmp/$INSTALLER" --installServer "$SERVER_DIR"
 
   rm -f "/tmp/$INSTALLER"
@@ -399,6 +409,11 @@ download_neoforge() {
 
   echo
   echo "⚙️  Instalando NeoForge Server..."
+  if ! command -v java &>/dev/null; then
+    echo "❌ Java no está instalado. Instala el JDK correcto antes de continuar."
+    echo "   Sugerencia: apt install openjdk-21-jre-headless"
+    exit 1
+  fi
   java -jar "/tmp/$INSTALLER" --installServer "$SERVER_DIR"
 
   rm -f "/tmp/$INSTALLER"
