@@ -21,6 +21,31 @@ fi
 read -rp "🌍 Nombre del mundo [world]: " LEVEL_NAME
 LEVEL_NAME=${LEVEL_NAME:-world}
 
+# Preguntar MOTD
+echo
+echo "💬 El MOTD es el mensaje que aparece en la lista de servidores de Minecraft."
+read -rp "💬 MOTD del servidor [Minecraft Server on Ubuntu]: " MOTD
+MOTD=${MOTD:-Minecraft Server on Ubuntu}
+
+# Preguntar imagen del servidor
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_ICON="$SCRIPT_DIR/../assets/server-icon.png"
+echo
+echo "🖼️  La imagen del servidor debe ser un PNG de exactamente 64x64 píxeles."
+echo "   (Deja en blanco para usar la imagen por defecto)"
+read -rp "🖼️  Ruta a tu server-icon.png [por defecto]: " CUSTOM_ICON
+
+if [ -n "$CUSTOM_ICON" ]; then
+  if [ ! -f "$CUSTOM_ICON" ]; then
+    echo "⚠️  Archivo no encontrado: $CUSTOM_ICON — usando imagen por defecto."
+    ICON_SRC="$DEFAULT_ICON"
+  else
+    ICON_SRC="$CUSTOM_ICON"
+  fi
+else
+  ICON_SRC="$DEFAULT_ICON"
+fi
+
 echo
 echo "📝 Generando server.properties..."
 echo
@@ -32,7 +57,7 @@ cat > "$PROPS_FILE" <<EOF
 # ===============================
 
 # General
-motd=Minecraft Server on Ubuntu
+motd=$MOTD
 max-players=$MAX_PLAYERS
 online-mode=false
 
@@ -68,5 +93,16 @@ EOF
 
 chown minecraft:minecraft "$PROPS_FILE"
 
+# Copiar imagen del servidor
+ICON_DEST="$SERVER_DIR/server-icon.png"
+if [ -f "$ICON_SRC" ]; then
+  cp "$ICON_SRC" "$ICON_DEST"
+  chown minecraft:minecraft "$ICON_DEST"
+  echo "🖼️  server-icon.png copiado correctamente"
+else
+  echo "⚠️  No se encontró ninguna imagen de servidor (omitiendo)"
+fi
+
 echo "✅ server.properties creado correctamente"
 echo "📍 Ubicación: $PROPS_FILE"
+echo "🖼️  Ícono:      $ICON_DEST"
